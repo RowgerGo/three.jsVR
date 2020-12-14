@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset=utf-8>
+    <title>three.js入门实例</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+    </style>
+</head>
+<!-- 在 body 上面添加了一个初始化的事件 init -->
+<!--     页面加载完毕后，回调会触发我们设置的 init 事件。init 函数里面一共调用了五个方法，分别是：初始化渲染器、初始化场景、初始化相机、添加模型、添加动画 -->
+<!--     使用 Three.js 显示创建的内容，我们必须需要的三大件是：渲染器、相机和场景。相机获取到场景内显示的内容，然后再通过渲染器渲染到画布上面。 -->
+
+<body onload="init()">
+
+    <!--     我们需要先将 Three.js 库的 JS 文件引入 -->
+    <script src="build/three.min.js"></script>
+    <script src="build/TrackballControls.js"></script>
+    <script>
+        // 声明变量
+        // 声明渲染器
+        var renderer = "";
+        // 声明相机
+        var camera = "";
+        // 声明场景
+        var scene = "";
+        // 声明几何体
+        var geometry = "";
+        // 声明材质
+        var material = "";
+        // 声明网格
+        var mesh = "";
+        // 声明相机控制器
+        var controls="";
+
+        //初始化渲染器
+        function initRenderer() {
+            /**
+            第一行我们实例化了一个 THREE.WebGLRenderer，
+            这是一个基于 WebGL 渲染的渲染器，
+            当然，Three.js 向下兼容，
+            还有 CanvasRenderer、CSS2DRenderer、CSS3DRenderer 和 SVGRenderer，
+            这四个渲染器分别基于 canvas2D、CSS2D、CSS3D 和 SVG 渲染的渲染器。
+            由于，作为 3D 渲染，WebGL 渲染的效果最好，
+            并且支持的功能更多，我们以后的课程也只会用到 THREE.WebGLRenderer，
+            需要使用其他渲染器时，会重点提示。
+            */
+            //实例化渲染器
+            renderer = new THREE.WebGLRenderer();
+            //设置宽和高
+            // 调用了一个设置函数 setSize 方法，这个是设置我们需要显示的窗口大小。案例我们是基于浏览器全屏显示，所以设置了浏览器窗口的宽和高。
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            //添加到body中
+            // renderer.domElement：获取canvas元素
+            //renderer.domElement 是在实例化渲染器时生成的一个 Canvas 画布，渲染器渲染界面生成的内容，都将在这个画布上显示。所以，我们将这个画布添加到了 DOM 当中，来显示渲染的内容。
+            document.body.appendChild(renderer.domElement);
+        }
+
+        //初始化场景
+        function initScene() {
+            //实例化场景
+            scene = new THREE.Scene();
+            // 红线是X轴，绿线是Y轴，蓝线是Z轴
+            var axesHelper = new THREE.AxesHelper(100);
+            //axesHelper.position.set(0,100,0);
+            scene.add(axesHelper);
+            // scene.rotation.y
+        }
+
+        //初始化相机
+        function initCamera() {
+            //实例化相机
+            // 透视相机
+            // 这一投影模式被用来模拟人眼所看到的景象，它是3D场景的渲染中使用得最普遍的投影模式。
+            // Three.js 里面有几个不同的相机，我们这里使用到的是 THREE.PerspectiveCamera，这个相机的效果是模拟人眼看到的效果，就是具有透视的效果，近大远小。
+            /**
+            第一行，我们实例化了一个透视相机，需要四个值，分别是视野、宽高比、近裁面和远裁面。我们分别介绍一下这四个值：
+            视野：当前相机视野的宽度，值越大，渲染出来的内容也会更多。
+            宽高比：默认是按照画布显示的宽高比例来设置，如果比例设置的不对，会发现渲染出来的画面有拉伸或者压缩的感觉。
+            近裁面和远裁面：这个是设置相机可以看到的场景内容的范围，如果场景内的内容位置不在这两个值内的话，将不会被显示到渲染的画面中。
+            */
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1100);
+            // 设置相机的位置
+            /**
+            WebGL 坐标系统作为 3D 坐标，在原来的 2D 坐标 x、y 轴上面又多了一个 z 轴，
+            大家注意 z 轴的方向，
+            是坐标轴朝向我们的方向是正轴，
+            我们眼看去的方向是 z 轴的负方向。
+            camera.position.set 函数是设置当前相机的位置，
+            函数传的三个值分别是 x 轴坐标，y 轴坐标和z 轴坐标。
+            我们只是将相机放到了 z 正轴坐标轴距离坐标原点的15的位置。
+            相机默认的朝向是朝向0点坐标的，我们也可以设置相机的朝向，这将在后面介绍相机时，专门介绍相关知识。
+            */
+            camera.position.set(0, 0, 15);
+            // 创建相机控制器
+            controls = new THREE.TrackballControls(camera, renderer.domElement);
+        }
+        /**
+        渲染器，场景和相机都全了，是不是就能显示东西了？不能！因为场景内没有内容，即使渲染出来也是一片漆黑，所以我们需要往场景里面添加内容。
+        创建一个网格（模型）需要两种对象：几何体和材质。
+        几何体代表模型的形状，它是由固定的点的位置组成，点绘制出面，面组成了模型。
+        材质是我们看到当前模型显示出来的效果，如显示的颜色，质感等。
+        */
+        //创建模型
+        function initMesh() {
+            /**
+            场景只是作为一个容器，我们将需要显示的内容都放到场景对象当中。如果我们需要将一个模型放入到场景当中，则可以使用 scene.add 方法
+            */
+            var materials = createFace("img/11", "")
+			mesh = new THREE.Mesh(new THREE.BoxGeometry(400, 400, 400), new THREE.MeshFaceMaterial(materials));
+			scene.add(mesh);
+        }
+
+        //运行动画
+        /**
+        动画，就是多幅图片一直切换便可显示动画的效果。
+        为了能显示动画的效果，我们首先要了解一个函数 requestAnimationFrame，
+        这个函数专门为了动画而出现。
+        它与 setInterval 相比，优势在于不需要设置多长时间重新渲染
+        ，而是在当前线程内 JS 空闲时自动渲染，并且最大帧数控制在一秒60帧。
+        在循环调用的函数中，每一帧我们都让页面重新渲染相机拍摄下来的内容
+        */
+        function animate() {
+
+            /** window.requestAnimationFrame() 
+             * 告诉浏览器——你希望执行一个动画，
+             * 并且要求浏览器在下次重绘之前调用指定的回调函数更新动画。
+             * 该方法需要传入一个回调函数作为参数，
+             * 该回调函数会在浏览器下一次重绘之前执行*/
+
+            requestAnimationFrame(animate); //循环调用函数
+           
+            // 刷新相机控制器
+            controls.update();
+            //进行渲染
+            /**
+            渲染的 render 方法需要两个值，第一个值是场景对象，第二个值是相机对象。
+            这意味着，你可以有多个相机和多个场景，
+            可以通过渲染不同的场景和相机让画布上显示不同的画面。
+            */
+            renderer.render(scene, camera);
+        }
+
+        //初始化函数
+        function init() {
+            // 初始化渲染器
+            initRenderer();
+            // 初始化场景
+            initScene();
+            // 初始化相机
+            initCamera();
+            // 初始化网格
+            initMesh();
+            // renderer.render(scene, camera);
+            // 初始化动画
+             animate();
+        }
+
+        // 创建立方体的六个面
+		function createFace(imgurl, endUrl) {
+			var side=THREE.DoubleSide;
+			var shadowSide=THREE.DoubleSide;
+			var materials = [
+				// 右
+				new THREE.MeshBasicMaterial({
+					map: THREE.ImageUtils.loadTexture(imgurl + '_r.jpg' + endUrl, {},
+						function () { renderer.render(scene, camera); }),
+					side: side,
+					shadowSide:shadowSide
+				}),
+				// 右
+				new THREE.MeshBasicMaterial({
+					map: THREE.ImageUtils.loadTexture(imgurl + '_l.jpg' + endUrl, {},
+						function () { renderer.render(scene, camera); }),
+					side: side,
+					shadowSide:shadowSide
+				}),
+				// 上
+				new THREE.MeshBasicMaterial({
+					map: THREE.ImageUtils.loadTexture(imgurl + '_u.jpg' + endUrl, {},
+						function () { renderer.render(scene, camera); }),
+					side: side,
+					shadowSide:shadowSide
+				}),
+				// 下
+				new THREE.MeshBasicMaterial({
+					map: THREE.ImageUtils.loadTexture(imgurl + '_d.jpg' + endUrl, {},
+						function () { renderer.render(scene, camera); }),
+					side:side,
+					shadowSide:shadowSide
+				}),
+				// 前
+				new THREE.MeshBasicMaterial({
+					map: THREE.ImageUtils.loadTexture(imgurl + '_f.jpg' + endUrl, {},
+						function () { renderer.render(scene, camera); }),
+					side: side,
+					shadowSide:shadowSide
+				}),
+				// 后
+				new THREE.MeshBasicMaterial({
+					map: THREE.ImageUtils.loadTexture(imgurl + '_b.jpg' + endUrl, {},
+						function () { renderer.render(scene, camera); }),
+					side: side,
+					shadowSide:shadowSide
+				})
+			];
+			return materials;
+		}
+    </script>
+</body>
+
+</html>
